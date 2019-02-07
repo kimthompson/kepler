@@ -1,0 +1,27 @@
+$fontMain: Helvetica, Arial, sans-serif;
+$mainFontColor: white;
+$backgroundColor: black;
+
+html, body {
+  background-color: $backgroundColor;
+}
+
+p, h1, h3 {
+  font-family: $fontMain;
+  color: $mainFontColor;
+}
+
+/* a container for kobjects, which are positioned with respect to it*/
+
+.kobject {
+  position: absolute;
+  display: inline-block;
+  /* color set in script */
+  /* width and height set in script (must be equal) */
+  /* top & left (X and Y) placement set in script */
+}
+
+
+@import 'tooltip';
+@import 'slider';
+@import 'stars';

@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Another Earth</title>
+  <script type='text/javascript' src='d3-master/d3.min.js'></script> <!-- The most recent download of D3.js -->
+  <script type='text/javascript' src='jquery-2.1.1.js'></script> <!-- jQuery version 2.1.1 -->
+  <link rel='stylesheet' href='jquery-ui-1.11.2/jquery-ui.css'> <!-- jQuery UI Stylesheet -->
+  <script src='jquery-ui-1.11.2/jquery-ui.js'></script> <!-- jQuery UI version 1.11.2 -->
+  <script type='text/javascript' src='star_buckets.json'></script> <!-- Variable name: planet_data -->
+  <script type='text/javascript' src='kepler_stars.json'></script> <!-- Variable name: star_data -->
+  <link rel='stylesheet' type='text/css' href='stylesheet.css'> <!-- Our stylesheet is listed last to override the jQuery stylesheets when necessary -->
+</head>
+<body>
+    <div id='planets'></div>
+<script>
+
+  $('#planets').hide();
+
+  $(document).mouseup(function (e){
+    var container = $("#planets");
+
+    if (!container.is(e.target) && container.has(e.target).length === 0) {
+      container.hide();
+    }
+  });
+
+  /* Get the minimum and maximum everything */
+  function getMin(data)
+  {
+    var minRA = Number.POSITIVE_INFINITY;
+    var minDecl = Number.POSITIVE_INFINITY;
+    var minER = Number.POSITIVE_INFINITY;
+    var minSR = Number.POSITIVE_INFINITY;
+    var minEM = Number.POSITIVE_INFINITY;
+    var minStellarTemp = Number.POSITIVE_INFINITY;
+    var minPeriod = Number.POSITIVE_INFINITY;
+
+    for (i=0; i < data.length; i++) {
+        if (data[i].RA < minRA) {
+            minRA = data[i].RA;
+          }
+        if (data[i].Decl < minDecl) {
+            minDecl = data[i].Decl;
+          }
+        if (Number(data[i].Earth_Radii) != NaN) {
+          if (data[i].Earth_Radii < minER) {
+            minER = data[i].Earth_Radii;
+          }
+        }
+        if (Number(data[i].Stellar_Radius) != NaN) {
+          if (data[i].Stellar_Radius < minSR) {
+            minSR = data[i].Stellar_Radius;
+          }
+        }
+        if (Number(data[i].Earth_Masses) != NaN) {
+          if (data[i].Earth_Masses < minEM) {
+            minEM = data[i].Earth_Masses;
+          }
+        }
+        if (Number(data[i].Stellar_Temp) != NaN) {
+          if (data[i].Stellar_Temp < minStellarTemp) {
+            minStellarTemp = data[i].Stellar_Temp;
+          }
+        }
+        if (Number(data[i].Period) != NaN) {
+          if (data[i].Period < minPeriod) {
+            minPeriod = data[i].Period;
+          }
+        }
+      }
+      return [minRA,minDecl,minER,minSR,minEM,minStellarTemp,minPeriod];
+    }
+
+    function getMax(data) {
+      var maxRA = Number.NEGATIVE_INFINITY;
+      var maxDecl = Number.NEGATIVE_INFINITY;
+      var maxER = Number.NEGATIVE_INFINITY;
+      var maxSR = Number.NEGATIVE_INFINITY;
+      var maxEM = Number.NEGATIVE_INFINITY;
+      var maxStellarTemp = Number.NEGATIVE_INFINITY;
+      var maxPeriod = Number.NEGATIVE_INFINITY;
+
+      for (i=0; i < data.length; i++) {
+        if (data[i].RA > maxRA) {
+          maxRA = data[i].RA;
+        }
+        if (data[i].Decl > maxDecl) {
+          maxDecl = data[i].Decl;
+        }
+        if (Number(data[i].Earth_Radii) != NaN) {
+          if (data[i].Earth_Radii > maxER) {
+            maxER = data[i].Earth_Radii;
+          }
+        }
+        if (Number(data[i].Stellar_Radius) != NaN) {
+          if (data[i].Stellar_Radius > maxSR) {
+            maxSR = data[i].Stellar_Radius;
+          }
+        }
+        if (Number(data[i].Earth_Masses) != NaN) {
+          if (data[i].Earth_Masses > maxEM) {
+            maxEM = data[i].Earth_Masses;
+          }
+        }
+        if (Number(data[i].Stellar_Temp) != NaN) {
+          if (data[i].Stellar_Temp > maxStellarTemp) {
+            maxStellarTemp = data[i].Stellar_Temp;
+          }
+        }
+        if(Number(data[i].Period) != NaN) {
+          if (data[i].Period > maxPeriod) {
+            maxPeriod = data[i].Period;
+          }
+        }
+      }
+      return [maxRA,maxDecl,maxER,maxSR,maxEM,maxStellarTemp,maxPeriod];
+    }
+
+    var minDataPoint = getMin(star_data);
+    var maxDataPoint = getMax(star_data);
+    var minRA = minDataPoint[0];
+    var maxRA = maxDataPoint[0];
+    var minDecl = minDataPoint[1];
+    var maxDecl = maxDataPoint[1];
+    var minEarthRadius = minDataPoint[2];
+    var maxEarthRadius = maxDataPoint[2];
+    var minSolarRadius = minDataPoint[3];
+    var maxSolarRadius = maxDataPoint[3];
+    var minEarthMasses = minDataPoint[4];
+    var maxEarthMasses = maxDataPoint[4];
+    var minStellarTemp = minDataPoint[5];
+    var maxStellarTemp = maxDataPoint[5];
+    var minPeriod = minDataPoint[6];
+    var maxPeriod = maxDataPoint[6];
+    var minPlanets = 1;
+    var maxPlanets = 7;
+
+
+    /* Variables to keep track of the values between sliders */
+    var tempBegin = minStellarTemp;
+    var tempEnd = maxStellarTemp;
+    var srBegin = minSolarRadius;
+    var srEnd = maxSolarRadius + 0.1;
+    var planetsBegin = minPlanets;
+    var planetsEnd = maxPlanets;
+
+    /* A function to find the radius of each star */
+    function radii(data) {
+        if (Number(data['Stellar_Radius']) != NaN) {
+            return data['Stellar_Radius'];
+        }
+    }
+
+    function earth_radii(data) {
+      if (Number(data['Earth_Radii']) != NaN) {
+        return data['Earth_Radii'] * 2;
+      } else {
+        return "NaN";
+      }
+    }
+
+    var margin;
+    var w;
+    var h;
+    var m;
+
+    margin = {top: 20, right: 20, bottom: 20, left: 20};
+    w = 1224 - margin.left - margin.right;
+    h = 685 - margin.top - margin.bottom;
+    m = 0;
+
+    var x = d3.scale.linear().domain([minRA, maxRA]).range([margin.left, w - margin.right]);
+    var y = d3.scale.linear().domain([minDecl, maxDecl]).range([margin.top, h - margin.bottom*2]);
+
+    /* Create a large container svg for the stars */
+    var svg = d3.select('body')
+    .append('svg')
+    .attr('class', 'container')
+    .attr('width', w)
+    .attr('height', h);
+
+    var planets = d3.select('#planets')
+    .append('svg')
+    .attr('width', 500)
+    .attr('height', 400);
+
+    function draw_planets(starNumber) {
+      var numberOfPlanets = planet_data[starNumber].length;
+      planets.selectAll('circle').remove();
+      planets.selectAll('circle')
+      .data(planet_data[starNumber])
+      .enter().append('circle')
+      .attr('class','planet')
+      .attr('id', function (d) { return d["Star"] + d["Planet"]; })
+      // Planet X Start
+      .attr('cx', function (d) {
+        var planet = d["Planet"];
+        switch(numberOfPlanets) {
+          case 1:
+            return 225;
+            break;
+          case 2:
+            switch(planet) {
+              case "b":
+                return 125;
+                break;
+              case "c":
+                return 325;
+                break;
+              default:
+                0;
+            }
+          case 3:
+            switch(planet) {
+              case "b":
+                return 100;
+                break;
+              case "c":
+                return 250;
+                break;
+              case "d":
+                return 375;
+                break;
+              default:
+                0;
+            }
+            break;
+          case 4:
+            switch(planet) {
+              case "b":
+                return 100;
+                break;
+              case "c":
+                return 100;
+                break;
+              case "d":
+                return 350;
+                break;
+              case "e":
+                return 350;
+                break;
+              default:
+                0;
+            }
+            break;
+          case 5:
+            switch(planet) {
+              case "b":
+                return 125;
+                break;
+              case "c":
+                return 250;
+                break;
+              case "d":
+                return 350;
+                break;
+              case "e":
+                return 325;
+                break;
+              case "f":
+                return 125;
+                break;
+              default:
+                0;
+            }
+            break;
+          case 6:
+            switch(planet) {
+              case "b":
+                return 100;
+                break;
+              case "c":
+                return 200;
+                break;
+              case "d":
+                return 350;
+                break;
+              case "e":
+                return 350;
+                break;
+              case "f":
+                return 225;
+                break;
+              case "g":
+                return 100;
+                break;
+              default:
+                0;
+            }
+            break;
+          case 7:
+            switch(planet) {
+              case "b":
+                return 75;
+                break;
+              case "c":
+                return 125;
+                break;
+              case "d":
+                return 125;
+                break;
+              case "e":
+                return 225;
+                break;
+              case "f":
+                return 275;
+                break;
+              case "g":
+                return 350;
+                break;
+              case "h":
+                return 375;
+                break;
+              default:
+                0;
+            }
+            break;
+          default:
+            0;
+        }
+      })
+      .attr('cy', function (d) {
+        var planet = d["Planet"];
+        switch(numberOfPlanets) {
+          case 1:
+            return 190;
+            break;
+          case 2:
+            return 190;
+            break;
+          case 3:
+            switch(planet) {
+              case "b":
+                return 100;
+                break;
+              case "c":
+                return 300;
+                break;
+              case "d":
+                return 100;
+                break;
+              default:
+                0;
+            }
+            break;
+          case 4:
+            switch(planet) {
+              case "b":
+                return 100;
+                break;
+              case "c":
+                return 300;
+                break;
+              case "d":
+                return 100;
+                break;
+              case "e":
+                return 300;
+                break;
+              default:
+                0;
+            }
+            break;
+          case 5:
+            switch(planet) {
+              case "b":
+                return 220;
+                break;
+              case "c":
+                return 330;
+                break;
+              case "d":
+                return 220;
+                break;
+              case "e":
+                return 100;
+                break;
+              case "f":
+                return 100;
+                break;
+              default:
+                0;
+            }
+            break;
+          case 6:
+            switch(planet) {
+              case "b":
+                return 240;
+                break;
+              case "c":
+                return 340;
+                break;
+              case "d":
+                return 240;
+                break;
+              case "e":
+                return 145;
+                break;
+              case "f":
+                return 45;
+                break;
+              case "g":
+                return 145;
+                break;
+              default:
+                0;
+            }
+            break;
+          case 7:
+            switch(planet) {
+              case "b":
+                return 210;
+                break;
+              case "c":
+                return 110;
+                break;
+              case "d":
+                return 310;
+                break;
+              case "e":
+                return 60;
+                break;
+              case "f":
+                return 335;
+                break;
+              case "g":
+                return 260;
+                break;
+              case "h":
+                return 135;
+                break;
+              default:
+                0;
+            }
+            break;
+          default:
+            0;
+        }
+      })
+      .attr('r', function (d) { return earth_radii(d); })
+      .style('fill', 'gray');
+
+      planets.selectAll('text').remove();
+      planets.selectAll("text")
+        .data(planet_data[starNumber])
+        .enter().append('text')
+        .attr('class','planet_info')
+        .attr('id', function (d) { return d["Star"] + d["Planet"] + "info"; })
+        .attr('x', function (d) {
+          var planet = d["Planet"];
+          switch(numberOfPlanets) {
+            case 1:
+              return 280;
+              break;
+              case 2:
+                switch(planet) {
+                  case "b":
+                    return 155;
+                    break;
+                    case "c":
+                      return 355;
+                      break;
+                      default:
+                        0;
+                      }
+                      case 3:
+                        switch(planet) {
+                          case "b":
+                            return 130;
+                            break;
+                            case "c":
+                              return 265;
+                              break;
+                              case "d":
+                                return 380;
+                                break;
+                                default:
+                                  0;
+                                }
+                                break;
+                                case 4:
+                                  switch(planet) {
+                                    case "b":
+                                      return 130;
+                                      break;
+                                      case "c":
+                                        return 130;
+                                        break;
+                                        case "d":
+                                          return 380;
+                                          break;
+                                          case "e":
+                                            return 380;
+                                            break;
+                                            default:
+                                              0;
+                                            }
+                                            break;
+                                            case 5:
+                                              switch(planet) {
+                                                case "b":
+                                                return 130;
+                                                break;
+                                                case "c":
+                                                return 265;
+                                                break;
+                                                case "d":
+                                                return 380;
+                                                break;
+                                                case "e":
+                                                return 355;
+                                                break;
+                                                case "f":
+                                                return 155;
+                                                break;
+                                                default:
+                                                0;
+                                              }
+                                              break;
+                                              case 6:
+                                              switch(planet) {
+                                                case "b":
+                                                return 130;
+                                                break;
+                                                case "c":
+                                                return 230;
+                                                break;
+                                                case "d":
+                                                return 380;
+                                                break;
+                                                case "e":
+                                                return 380;
+                                                break;
+                                                case "f":
+                                                return 255;
+                                                break;
+                                                case "g":
+                                                return 130;
+                                                break;
+                                                default:
+                                                0;
+                                              }
+                                              break;
+                                              case 7:
+                                              switch(planet) {
+                                                case "b":
+                                                return 105;
+                                                break;
+                                                case "c":
+                                                return 155;
+                                                break;
+                                                case "d":
+                                                return 180;
+                                                break;
+                                                case "e":
+                                                return 255;
+                                                break;
+                                                case "f":
+                                                return 305;
+                                                break;
+                                                case "g":
+                                                return 380;
+                                                break;
+                                                case "h":
+                                                return 405;
+                                                break;
+                                                default:
+                                                0;
+                                              }
+                                              break;
+                                              default:
+                                              0;
+                                            }
+                                          })
+        .attr('y', function (d) {
+          var planet = d["Planet"];
+          switch(numberOfPlanets) {
+            case 1:
+              return 180;
+              break;
+              case 2:
+                return 180;
+                break;
+                case 3:
+                  switch(planet) {
+                    case "b":
+                      return 90;
+                      break;
+                      case "c":
+                        return 290;
+                        break;
+                        case "d":
+                          return 90;
+                          break;
+                          default:
+                            0;
+                          }
+                          break;
+                          case 4:
+                            switch(planet) {
+                              case "b":
+                                return 90;
+                                break;
+                                case "c":
+                                  return 290;
+                                  break;
+                                  case "d":
+                                    return 90;
+                                    break;
+                                    case "e":
+                                      return 290;
+                                      break;
+                                      default:
+                                        0;
+                                      }
+                                      break;
+                                      case 5:
+                                        switch(planet) {
+                                          case "b":
+                                            return 210;
+                                            break;
+                                            case "c":
+                                              return 320;
+                                              break;
+                                              case "d":
+                                              return 210;
+                                              break;
+                                              case "e":
+                                              return 90;
+                                              break;
+                                              case "f":
+                                              return 90;
+                                              break;
+                                              default:
+                                              0;
+                                            }
+                                            break;
+                                            case 6:
+                                            switch(planet) {
+                                              case "b":
+                                              return 230;
+                                              break;
+                                              case "c":
+                                              return 330;
+                                              break;
+                                              case "d":
+                                              return 230;
+                                              break;
+                                              case "e":
+                                              return 135;
+                                              break;
+                                              case "f":
+                                              return 35;
+                                              break;
+                                              case "g":
+                                              return 135;
+                                              break;
+                                              default:
+                                              0;
+                                            }
+                                            break;
+                                            case 7:
+                                            switch(planet) {
+                                              case "b":
+                                              return 200;
+                                              break;
+                                              case "c":
+                                              return 100;
+                                              break;
+                                              case "d":
+                                              return 300;
+                                              break;
+                                              case "e":
+                                              return 50;
+                                              break;
+                                              case "f":
+                                              return 325;
+                                              break;
+                                              case "g":
+                                              return 250;
+                                              break;
+                                              case "h":
+                                              return 125;
+                                              break;
+                                              default:
+                                              0;
+                                            }
+                                            break;
+                                            default:
+                                            0;
+                                          }
+        })
+        .attr('fill', 'white')
+        .attr('font-family', 'Helvetica, sans-serif')
+        .attr('font-size', '.7em')
+        .text(function (d) { return d["Name"] + ", " + d["Earth_Radii"] + "x Earth" } );
+      }
+
+
+    function filtering(d) {
+        if ((d['Stellar_Temp'] > tempBegin) && (d['Stellar_Temp'] < tempEnd) && (d['Stellar_Radius'] > srBegin) && (d['Stellar_Radius'] < srEnd) && (planet_data[d['Star']].length > (planetsBegin - 1)) && (planet_data[d['Star']].length < (planetsEnd + 1))) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /* A function to find the color of each star based on temperature */
+    function color(data) {
+      var color;
+      var colors = d3.scale.linear().domain([3700, 6750,33000]).range(['#e37d24','#ffffff','#7f83ea'])
+      return colors(data['Stellar_Temp']);
+    }
+
+    /* This function now will filter items that do not fall within the temperature range of smallestTemp and largestTemp */
+    function drawStars() {
+      svg.selectAll('circle').remove();  // Clears all existing circles each time the function is called
+      svg.selectAll('circle')
+      .data(star_data)
+      .enter().append('circle')
+      .filter( function (d) { return filtering(d)}) // Filters to display only the stars that have temperatures between coldestTemp and hottestTemp
+      .attr('class', 'star')
+      .attr('id', function (d) {return d['Star']; })
+      .attr('cx', function (d) { return x(d['RA']); })
+      .attr('cy', function (d) { return y(d['Decl']); })
+      .attr('r', function (d) { return radii(d); })
+      .attr('stroke-width', function (d) {
+        if (radii(d) > 3) {
+          return 0;
+        } else {
+          return 6;
+        }
+      })
+      .on('mousemove', function (d) {
+        d3.select('#tooltip')
+        .select('#name')
+        .text(d['Name']);
+
+        d3.select('#tooltip')
+        .select('#value')
+        .text(planet_data[d['Star']].length); // Gets the count of the sub array of planets "belonging" to that star
+
+        d3.select("#tooltip").classed("hidden", false);
+      })
+      .on('mouseout', function (d) {
+        d3.select("#tooltip").classed("hidden", true);
+      })
+      .on('click', function(d){
+        $('#planets').show();
+        draw_planets(d['Star']);
+      })
+      .style('fill', function (d) { return color(d); });
+    }
+
+    drawStars(); // Show all stars by default
+
+    /* jQuery range slider UI */
+    $(function() {
+      $('#slider-temp-range').slider({
+        range: true,
+        min: minStellarTemp,
+        max: 27731,
+        values: [minStellarTemp, 27731],
+        slide: function(event, ui) {
+          tempBegin = d3.min([ui.values[0], 27731]);
+          tempEnd = d3.max([ui.values[1], minStellarTemp]);
+          $('#temp').val(ui.values[0] + "K - " + ui.values[1] + "K");
+          drawStars();
+        }
+      });
+      $('#temp').val($('#slider-temp-range').slider('values', 0) + "K - " + $('#slider-temp-range').slider('values', 1) + "K");
+    });
+    // $(function() {
+    //   $('#slider-sr-range').slider({
+    //     step: .1,
+    //     range: true,
+    //     min: minSolarRadius,
+    //     max: 6.4,
+    //     values: [minSolarRadius, 6.4],
+    //     slide: function(event, ui) {
+    //       srBegin = d3.min([ui.values[0], 6.4]);
+    //       srEnd = d3.max([ui.values[1], minSolarRadius]);
+    //       $('#SR').val(ui.values[0] + " - " + ui.values[1] + " times the size of our sun");
+    //       drawStars();
+    //     }
+    //   });
+    //   $('#SR').val($('#slider-sr-range').slider('values', 0) + " - " + $('#slider-sr-range').slider('values', 1) + " times the size of our sun");
+    // });
+    $(function() {
+      $('#slider-numPlanets-range').slider({
+        step: 1,
+        range: true,
+        min: minPlanets,
+        max: maxPlanets,
+        values: [minPlanets, maxPlanets],
+        slide: function(event, ui) {
+          planetsBegin = d3.min([ui.values[0], maxPlanets]);
+          planetsEnd = d3.max([ui.values[1], minPlanets]);
+          $('#numPlanets').val(ui.values[0] + " - " + ui.values[1] + " Kepler Objects");
+          drawStars();
+        }
+      });
+      $('#numPlanets').val($('#slider-numPlanets-range').slider('values', 0) + " - " + $('#slider-numPlanets-range').slider('values', 1) + " Kepler Objects");
+    });
+  </script>
+    <div id='tooltip' class='hidden'>
+      <p><strong><span id='name'>Star Name</span></strong></p>
+      <p>Planets: <span id='value'>5</span></p>
+    </div>
+    <div class='title'  style="position:absolute;left:0;top:0">
+    <h1>Another Earth</h1>
+  </div>
+    <div id='sliders' style="position:absolute;left:1050px;top:450px">
+    <div class='slider'>
+      <p>
+        <label for='temp'>Temperature range:</label>
+        <input style='width:200px' type='text' id='temp' readonly>
+      </p>
+      <div id='slider-temp-range'></div>
+    </div>
+    <!-- <div class='slider'>
+      <p>
+        <label for='SR'>Solar Radius:</label>
+        <input style='width:200px' type='text' id='SR' readonly>
+      </p>
+      <div id='slider-sr-range'></div>
+    </div> -->
+    <div class='slider'>
+      <p>
+        <label for='numPlanets'>Orbiting Planets:</label>
+        <input style='width:200px' type='text' id='numPlanets' readonly>
+      </p>
+      <div id='slider-numPlanets-range'></div>
+    </div>
+  </div>
+  </div>
+</body>
+</html>

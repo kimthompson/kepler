@@ -1,0 +1,59 @@
+$tooltipBackground: #2c2c2c;
+$planetsBackground: #0e0e0e;
+$tooltipBorder: 1px solid lightgray;
+
+$tooltipPositionTop: 540px;
+$tooltipPositionLeft: 15px;
+
+$tooltipFontSize: .75em;
+
+#tooltip {
+  position: absolute;
+  width: 80px;
+  height: auto;
+  padding: 5px;
+  background-color: $tooltipBackground;
+  border: $tooltipBorder;
+  border-radius: 5px;
+  pointer-events: none;
+  top: $tooltipPositionTop;
+  left: $tooltipPositionLeft;
+}
+
+#tooltip.hidden {
+  display: none;
+}
+
+#tooltip p {
+  font-size: $tooltipFontSize;
+  margin: 0;
+  padding: 3px;
+}
+
+
+#planets {
+  position: relative;
+  width: 500px;
+  height: 400px;
+  padding: 10px;
+  background-color: $planetsBackground;
+  border: $tooltipBorder;
+  border-radius: 5px;
+  pointer-events: none;
+  top: 100px;
+  left: 200px;
+}
+
+#planets p {
+  font-size: $tooltipFontSize;
+  margin: 0;
+  padding: 3px;
+}
+
+#planets.hidden {
+  display: none;
+}
+
+.planet {
+  position: absolute;
+}
